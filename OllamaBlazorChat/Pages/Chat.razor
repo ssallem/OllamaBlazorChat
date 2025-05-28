@@ -1,0 +1,110 @@
+@page "/"
+@page "/chat"
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject ChatService ChatService
+@inject IJSRuntime JS
+
+<h3>Ollama Chat</h3>
+
+<div id="chat-container" class="chat-window">
+    @foreach (var message in Messages)
+    {
+        <div class="message @(message.Role)" id="@message.Id">
+            @* <b>@message.Role:</b> *@
+            <div id="msg-@message.Id">@message.Content</div>
+            <button class="copy-btn"
+            data-tooltip="복사"
+            @onclick="() => CopyMessage(message.Content)">
+                <i class="fas fa-copy"></i>
+            </button>
+        </div>     
+    }
+
+    @if (IsLoading)
+    {
+        <div class="message assistant"><i>🕐 답변 생성 중...</i></div>
+    }
+</div>
+
+<input @bind="UserInput"
+@oninput="OnInputChanged"
+@onkeydown="HandleEnter"
+placeholder="메시지를 입력하세요..."
+class="input-box"
+disabled="@IsLoading" />
+
+<!-- ✅ Toast 메시지 위치 -->
+<div id="toast"></div>
+
+<div class="control-bar">
+    <button @onclick="ToggleTheme">🌗 테마 전환</button>
+</div>
+
+@code {
+
+    private bool IsLoading = false;
+    private List<ChatMessage> Messages = new();
+    private string UserInput = "";
+    private int messageIdCounter = 0;
+
+    private void OnInputChanged(ChangeEventArgs e)
+    {
+        UserInput = e.Value?.ToString() ?? "";
+    }
+
+    private async Task HandleEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(UserInput))
+        {
+            var userMessage = new ChatMessage { Id = $"msg{++messageIdCounter}", Role = "user", Content = UserInput };
+            UserInput = string.Empty;
+            IsLoading = true;
+            await AddMessageAsync(userMessage);
+
+            try
+            {
+                var aiResponse = await ChatService.SendChatAsync(Messages.TakeLast(10).ToList());
+                aiResponse.Id = $"msg{++messageIdCounter}";
+
+                await AddMessageAsync(aiResponse);
+            }
+            catch (Exception ex)
+            {
+                await AddMessageAsync(new ChatMessage { Role = "assistant", Content = $"❌ 오류: {ex.Message}" });
+            }
+            finally
+            {
+                IsLoading = false;                
+            }
+        }
+    }
+
+    private async Task CopyMessage(string content)
+    {
+        await JS.InvokeVoidAsync("copyToClipboard", content);
+    }
+
+    private async Task ToggleTheme()
+    {
+        await JS.InvokeVoidAsync("toggleTheme");
+    }
+    
+    private async Task AddMessageAsync(ChatMessage message)
+    {
+        Messages.Add(message);
+        await Task.Yield();
+        StateHasChanged(); // UI 반영 보장        
+        await JS.InvokeVoidAsync("scrollToBottom");
+    }
+
+    private async Task AddMessagesAsync(IEnumerable<ChatMessage> messages)
+    {
+        foreach (var msg in messages)
+            Messages.Add(msg);
+
+        StateHasChanged();
+        await JS.InvokeVoidAsync("scrollToBottom");
+    }
+
+}
