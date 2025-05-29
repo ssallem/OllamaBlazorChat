@@ -1,0 +1,178 @@
+﻿@* ==============================================================================
+   Blazor RAG Chat Component (.NET 8 + Server-Side)
+   ============================================================================== *@
+
+@page "/chat"
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Text.Json
+@inject IRagChatService RagChatService
+@inject IDocumentProcessor DocumentProcessor
+@inject IVectorStoreService VectorStore
+@inject IJSRuntime JSRuntime
+@inject ILogger<RagChat> Logger
+@implements IAsyncDisposable
+
+<PageTitle>Private LLM RAG Chat</PageTitle>
+
+<div class="container-fluid h-100">
+    <div class="row h-100">
+        <!-- 사이드바: 문서 관리 -->
+        <div class="col-md-3 bg-light border-end p-3">
+            <h5 class="mb-3">📄 문서 관리</h5>
+            
+            <!-- 파일 업로드 -->
+            <div class="mb-4">
+                <label class="form-label">문서 업로드</label>
+                <InputFile OnChange="HandleFileUpload" multiple accept=".pdf,.xlsx,.xls,.docx,.txt" class="form-control mb-2" />
+                <input @bind="department" placeholder="부서명" class="form-control mb-2" />
+                <input @bind="tags" placeholder="태그 (쉼표로 구분)" class="form-control mb-2" />
+                <button class="btn btn-primary w-100" @onclick="UploadDocuments" disabled="@isUploading">
+                    @if (isUploading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    업로드
+                </button>
+            </div>
+
+            <!-- 업로드된 문서 목록 -->
+            <div class="mb-4">
+                <h6>업로드된 문서</h6>
+                <div class="list-group" style="max-height: 300px; overflow-y: auto;">
+                    @foreach (var doc in uploadedDocuments)
+                    {
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="fw-bold">@doc.FileName</small><br />
+                                <small class="text-muted">@doc.Department</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteDocument(doc.Id)">
+                                🗑️
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- 문서 검색 -->
+            <div>
+                <h6>문서 검색</h6>
+                <div class="input-group mb-2">
+                    <input @bind="searchQuery" @onkeypress="@(async (e) => { if (e.Key == "Enter") await SearchDocuments(); })" 
+                           placeholder="키워드 입력" class="form-control" />
+                    <button class="btn btn-outline-secondary" @onclick="SearchDocuments">
+                        🔍
+                    </button>
+                </div>
+                @if (searchResults.Any())
+                {
+                    <div class="search-results" style="max-height: 200px; overflow-y: auto;">
+                        @foreach (var result in searchResults)
+                        {
+                            <div class="card mb-2">
+                                <div class="card-body p-2">
+                                    <h6 class="card-title fs-6">@result.Title</h6>
+                                    <p class="card-text small">@result.Content.Substring(0, Math.Min(100, result.Content.Length))...</p>
+                                    <small class="text-muted">@result.Metadata.Department</small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- 메인 채팅 영역 -->
+        <div class="col-md-9 d-flex flex-column h-100">
+            <!-- 채팅 헤더 -->
+            <div class="bg-primary text-white p-3">
+                <h4 class="mb-0">🤖 Private LLM Assistant</h4>
+                <small>사내 문서 기반 AI 어시스턴트</small>
+            </div>
+
+            <!-- 채팅 메시지 영역 -->
+            <div @ref="chatContainer" class="flex-grow-1 p-3 overflow-auto" style="background-color: #f8f9fa;">
+                @foreach (var message in chatHistory)
+                {
+                    <div class="mb-3 @(message.Role == "user" ? "text-end" : "text-start")">
+                        <div class="d-inline-block p-3 rounded @GetMessageCssClass(message.Role)" style="max-width: 70%;">
+                            <div class="message-content">
+                                @if (message.Role == "assistant")
+                                {
+                                    @((MarkupString)FormatMessage(message.Content))
+                                }
+                                else
+                                {
+                                    @message.Content
+                                }
+                            </div>
+                            <small class="text-muted d-block mt-1">
+                                @message.Timestamp.ToString("HH:mm")
+                            </small>
+                        </div>
+                    </div>
+                }
+
+                @if (isTyping)
+                {
+                    <div class="mb-3 text-start">
+                        <div class="d-inline-block p-3 rounded bg-light">
+                            <div class="typing-indicator">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- 입력 영역 -->
+            <div class="border-top p-3 bg-white">
+                <div class="input-group">
+                    <input @ref="messageInput" @bind="currentMessage" @onkeypress="HandleKeyPress" 
+                           placeholder="메시지를 입력하세요..." class="form-control" disabled="@isTyping" />
+                    <button class="btn btn-primary" @onclick="SendMessage" disabled="@(isTyping || string.IsNullOrWhiteSpace(currentMessage))">
+                        @if (isTyping)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        else
+                        {
+                            <span>📤</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // 상태 변수들
+    private List<ChatMessage> chatHistory = new();
+    private List<DocumentInfo> uploadedDocuments = new();
+    private List<RagDocument> searchResults = new();
+    private string currentMessage = "";
+    private string searchQuery = "";
+    private string department = "";
+    private string tags = "";
+    private bool isTyping = false;
+    private bool isUploading = false;
+    
+    // 컴포넌트 참조
+    private ElementReference chatContainer;
+    private ElementReference messageInput;
+    private IJSObjectReference? jsModule;
+    
+    // 파일 업로드 관련
+    private IBrowserFile[]? selectedFiles;
+    private ChatContext chatContext;
+
+    protected override async Task OnInitializedAsync()
+    {
+        chatContext = new ChatContext(
+            UserId: "user123", // 실제로는 인증에서 가져와야 함
+            SessionId: Guid.NewGuid().ToString(),
+            History: chatHistory,
+            Variables
