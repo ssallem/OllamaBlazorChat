@@ -2,13 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using OllamaBlazorChat.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
-using OllamaBlazorChat.Models;
 
 public class ChatService
 {
@@ -30,16 +30,6 @@ public class ChatService
                 content = m.Content
             }).ToList()
         };
-
-        //var json = JsonSerializer.Serialize(payload);
-        //var content = new StringContent(json, Encoding.UTF8, "application/json");
-        //var response = await _http.PostAsync("/chat", content);
-
-        //var result = await response.Content.ReadAsStringAsync();
-        //var doc = JsonDocument.Parse(result);
-        //var text = doc.RootElement.GetProperty("message").GetProperty("contents").GetProperty("text").GetString();
-
-        //return new ChatMessage { Role = "assistant", Content = text ?? "" };
 
         /*
 {
@@ -71,13 +61,6 @@ public class ChatService
         var contents = firstMessage.GetProperty("contents");
         var firstContent = contents[0]; // content 배열 중 첫 번째
         var text = firstContent.GetProperty("text").GetString();
-
-
-        //var text = doc.RootElement
-        //    .GetProperty("messages")
-        //    .GetProperty("contents")
-        //    .GetProperty("text")
-        //    .GetString();
 
         return new ChatMessage
         {

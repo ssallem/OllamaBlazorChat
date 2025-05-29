@@ -1,36 +1,71 @@
-
-body {
-    background-color: #121212;
-    color: #f5f5f5;
-    font-family: 'Segoe UI', sans-serif;
-}
-
-.chat-window {
-    height: 500px;
-    overflow-y: auto;
+/* 페이지 전체 컨테이너 */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
     background-color: #1e1e1e;
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 10px;
-    box-shadow: 0 0 8px rgba(255,255,255,0.05);
-    position: relative;
+    color: white;
+    overflow: hidden;
 }
-/*.message {
-    display: inline-block;
-    margin-bottom: 0.75rem;
-    width:  fit-content;
-    max-width: 70%;
-    min-width: 10%;
-    word-break: break-word;
-    padding: 0.75rem 2.5rem 0.75rem 0.75rem;
-    border-radius: 20px;
-    position: relative;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    cursor: default;
-}*/
 
+/* 상단 헤더 - 고정 */
+.header {
+    flex: 0 0 auto;
+    padding: 1rem;
+    background-color: #2a2a2a;
+    border-bottom: 1px solid #444;
+    text-align: center;
+}
+
+    .header h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: #fff;
+    }
+
+/* 메인 레이아웃 컨테이너 */
+.layout-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0; /* flexbox 오버플로우 해결을 위한 중요한 속성 */
+    overflow: hidden;
+}
+
+/* 채팅 윈도우 - 가변 영역 (스크롤 가능) */
+.chat-window {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1rem;
+    background-color: #1e1e1e;
+    /* 스크롤바 스타일링 */
+    scrollbar-width: thin;
+    scrollbar-color: #666 #2a2a2a;
+}
+
+    /* 웹킷 브라우저용 스크롤바 스타일 */
+    .chat-window::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .chat-window::-webkit-scrollbar-track {
+        background: #2a2a2a;
+    }
+
+    .chat-window::-webkit-scrollbar-thumb {
+        background: #666;
+        border-radius: 4px;
+    }
+
+        .chat-window::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+
+/* 메시지 스타일 */
 .message {
     max-width: 70%;
     padding: 0.75rem 2.5rem 0.75rem 0.75rem;
@@ -39,30 +74,22 @@ body {
     position: relative;
     white-space: pre-wrap;
     word-wrap: break-word;
+    line-height: 1.4;
 }
 
-.user {
-    background-color: #0d47a1;
-    color: white;
-    margin-left: auto;
-    text-align: right;
-}
+    .message.user {
+        background-color: #0d47a1;
+        color: white;
+        margin-left: auto;
+        text-align: right;
+    }
 
-.assistant {
-    background-color: #263238;
-    color: #a5d6a7;
-    margin-right: auto;
-    text-align: left;
-}
-
-.input-box {
-    width: 98%;
-    padding: 12px;
-    border-radius: 10px;
-    border: 1px solid #333;
-    background-color: #2a2a2a;
-    color: white;
-}
+    .message.assistant {
+        background-color: #263238;
+        color: #a5d6a7;
+        margin-right: auto;
+        text-align: left;
+    }
 
 .copy-btn {
     position: absolute;
@@ -73,22 +100,86 @@ body {
     cursor: pointer;
     color: #ccc;
     font-size: 1rem;
+    opacity: 0.7;
+    transition: opacity 0.2s;
 }
 
-.copy-btn:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 125%;
-    right: 0;
-    background-color: #333;
-    color: #fff;
-    padding: 3px 6px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    white-space: nowrap;
-    opacity: 0.9;
+    .copy-btn:hover {
+        opacity: 1;
+    }
+
+        .copy-btn:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            right: 0;
+            background-color: #333;
+            color: #fff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0.9;
+            z-index: 1000;
+        }
+
+/* 입력 영역 - 고정 */
+.input-area {
+    flex: 0 0 auto;
+    padding: 1rem;
+    background-color: #2a2a2a;
+    border-top: 1px solid #444;
 }
 
+.input-box {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 25px;
+    border: 1px solid #333;
+    background-color: #1e1e1e;
+    color: white;
+    box-sizing: border-box;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+    .input-box:focus {
+        border-color: #0d47a1;
+    }
+
+    .input-box:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+/* 컨트롤 바 - 고정 */
+.control-bar {
+    flex: 0 0 auto;
+    padding: 0.5rem 1rem;
+    display: flex;
+    justify-content: center;
+    background-color: #2a2a2a;
+    border-top: 1px solid #444;
+}
+
+    .control-bar button {
+        background-color: #444;
+        color: white;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+    }
+
+        .control-bar button:hover {
+            background-color: #666;
+        }
+
+/* Toast 메시지 */
 #toast {
     position: fixed;
     top: 1rem;
@@ -104,41 +195,99 @@ body {
     z-index: 9999;
 }
 
-.control-bar {
-    margin-top: 1rem;
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-}
-.control-bar button {
-    background-color: #444;
-    color: white;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-}
-.control-bar button:hover {
-    background-color: #666;
-}
-
-body.light {
-    background-color: #f0f0f0;
+/* 라이트 테마 */
+body.light .page-container {
+    background-color: #f5f5f5;
     color: #222;
 }
+
+body.light .header {
+    background-color: #fff;
+    border-bottom: 1px solid #ddd;
+}
+
+    body.light .header h3 {
+        color: #222;
+    }
+
 body.light .chat-window {
     background-color: #fff;
+    scrollbar-color: #ccc #f0f0f0;
 }
-body.light .user {
+
+    body.light .chat-window::-webkit-scrollbar-track {
+        background: #f0f0f0;
+    }
+
+    body.light .chat-window::-webkit-scrollbar-thumb {
+        background: #ccc;
+    }
+
+        body.light .chat-window::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+body.light .message.user {
     background-color: #1976d2;
 }
-body.light .assistant {
+
+body.light .message.assistant {
     background-color: #e0f2f1;
     color: #00695c;
 }
+
+body.light .input-area {
+    background-color: #fff;
+    border-top: 1px solid #ddd;
+}
+
 body.light .input-box {
     background-color: #fff;
     color: #222;
     border: 1px solid #ccc;
 }
 
+    body.light .input-box:focus {
+        border-color: #1976d2;
+    }
+
+body.light .control-bar {
+    background-color: #fff;
+    border-top: 1px solid #ddd;
+}
+
+    body.light .control-bar button {
+        background-color: #e0e0e0;
+        color: #333;
+    }
+
+        body.light .control-bar button:hover {
+            background-color: #d0d0d0;
+        }
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .message {
+        max-width: 85%;
+        padding: 0.65rem 2rem 0.65rem 0.65rem;
+    }
+
+    .chat-window {
+        padding: 0.75rem;
+    }
+
+    .input-area {
+        padding: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .message {
+        max-width: 95%;
+        font-size: 14px;
+    }
+
+    .header h3 {
+        font-size: 1rem;
+    }
+}

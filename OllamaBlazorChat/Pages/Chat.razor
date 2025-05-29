@@ -5,44 +5,56 @@
 @inject ChatService ChatService
 @inject IJSRuntime JS
 
-<h3>Ollama Chat</h3>
+<div class="page-container">
+    <!-- 상단 헤더 - 고정 -->
+    <div class="header">
+        <h3>🧠 Spelix Chat</h3>
+    </div>
 
-<div id="chat-container" class="chat-window">
-    @foreach (var message in Messages)
-    {
-        <div class="message @(message.Role)" id="@message.Id">
-            @* <b>@message.Role:</b> *@
-            <div id="msg-@message.Id">@message.Content</div>
-            <button class="copy-btn"
-            data-tooltip="복사"
-            @onclick="() => CopyMessage(message.Content)">
-                <i class="fas fa-copy"></i>
-            </button>
-        </div>     
-    }
+    <!-- 메인 레이아웃 -->
+    <div class="layout-container">
+        <!-- 채팅 영역 - 가변 (스크롤 가능) -->
+        <div id="chat-container" class="chat-window">
+            @foreach (var message in Messages)
+            {
+                <div class="message @(message.Role)" id="@message.Id">
+                    <div id="msg-@message.Id">@message.Content</div>
+                    <button class="copy-btn"
+                            data-tooltip="복사"
+                            @onclick="() => CopyMessage(message.Content)">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            }
 
-    @if (IsLoading)
-    {
-        <div class="message assistant"><i>🕐 답변 생성 중...</i></div>
-    }
+            @if (IsLoading)
+            {
+                <div class="message assistant"><i>🕐 답변 생성 중...</i></div>
+            }
+        </div>
+
+        <!-- 입력 영역 - 고정 -->
+        <div class="input-area">
+            <input @bind="UserInput"
+                   @oninput="OnInputChanged"
+                   @onkeydown="HandleEnter"
+                   placeholder="메시지를 입력하세요..."
+                   class="input-box"
+                   disabled="@IsLoading" />
+        </div>
+
+        <!-- 컨트롤 바 - 고정 -->
+        <div class="control-bar">
+            <button @onclick="ToggleTheme">🌗 테마 전환</button>
+        </div>
+    </div>
 </div>
 
-<input @bind="UserInput"
-@oninput="OnInputChanged"
-@onkeydown="HandleEnter"
-placeholder="메시지를 입력하세요..."
-class="input-box"
-disabled="@IsLoading" />
-
-<!-- ✅ Toast 메시지 위치 -->
+<!-- Toast 메시지 -->
 <div id="toast"></div>
 
-<div class="control-bar">
-    <button @onclick="ToggleTheme">🌗 테마 전환</button>
-</div>
-
 @code {
-
+    // 기존 코드 그대로 유지
     private bool IsLoading = false;
     private List<ChatMessage> Messages = new();
     private string UserInput = "";
@@ -75,7 +87,7 @@ disabled="@IsLoading" />
             }
             finally
             {
-                IsLoading = false;                
+                IsLoading = false;
             }
         }
     }
@@ -89,12 +101,12 @@ disabled="@IsLoading" />
     {
         await JS.InvokeVoidAsync("toggleTheme");
     }
-    
+
     private async Task AddMessageAsync(ChatMessage message)
     {
         Messages.Add(message);
         await Task.Yield();
-        StateHasChanged(); // UI 반영 보장        
+        StateHasChanged();
         await JS.InvokeVoidAsync("scrollToBottom");
     }
 
@@ -106,5 +118,4 @@ disabled="@IsLoading" />
         StateHasChanged();
         await JS.InvokeVoidAsync("scrollToBottom");
     }
-
 }
